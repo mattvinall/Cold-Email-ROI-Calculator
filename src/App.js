@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
 
+// Define currency options
+const currencyOptions = [
+  { value: 'USD', label: 'USD - United States Dollar', symbol: '$' },
+  { value: 'CAD', label: 'CAD - Canadian Dollar', symbol: 'C$' },
+  { value: 'EUR', label: 'EUR - Euro', symbol: '€' },
+  { value: 'GBP', label: 'GBP - British Pound', symbol: '£' },
+  { value: 'AED', label: 'AED - UAE Dirham', symbol: 'د.إ' }
+];
+
 const ColdEmailROICalculator = () => {
   // Campaign metrics state
   const [campaignMetrics, setCampaignMetrics] = useState({
@@ -9,19 +18,22 @@ const ColdEmailROICalculator = () => {
     bookingRate: 20, // percentage of positive replies
     showUpRate: 80, // percentage of bookings
     closingRate: 20, // percentage of show-ups
-    customerLTV: 10000, // dollars
+    customerLTV: 10000, // initial value, currency will be applied
     metricsTimeframe: 'monthly' // 'total' or 'monthly'
   });
 
   // Cost model state
   const [costModel, setCostModel] = useState({
-    setupFee: 1500, // dollars
-    retainerCost: 3000, // dollars per month
-    payPerCallFee: 0, // dollars per call
+    setupFee: 1500, // initial value
+    retainerCost: 3000, // per month
+    payPerCallFee: 0, // per call
     campaignDuration: 3, // months
     revenueShare: 0, // percentage
     useRevenueShare: false, // toggle for revenue share
   });
+
+  // Selected currency state
+  const [selectedCurrency, setSelectedCurrency] = useState(currencyOptions[0].value); // Default to USD
 
   // Calculated metrics state
   const [calculatedMetrics, setCalculatedMetrics] = useState({
@@ -38,9 +50,11 @@ const ColdEmailROICalculator = () => {
     revenueShareCost: 0
   });
 
-  // Calculate results whenever inputs change
+  // Find current currency object for easy access to its properties
+  const currentCurrency = currencyOptions.find(c => c.value === selectedCurrency) || currencyOptions[0];
+
+  // Calculate results whenever inputs or currency change
   useEffect(() => {
-    // Determine if the metrics are monthly or for the total campaign
     const timeMultiplier = campaignMetrics.metricsTimeframe === 'monthly' ? costModel.campaignDuration : 1;
     const effectiveContacts = campaignMetrics.metricsTimeframe === 'monthly'
       ? campaignMetrics.contactsReached * timeMultiplier
@@ -79,7 +93,7 @@ const ColdEmailROICalculator = () => {
       roiPercentage,
       revenueShareCost
     });
-  }, [campaignMetrics, costModel]);
+  }, [campaignMetrics, costModel, selectedCurrency]); // Added selectedCurrency to dependencies
 
   // Handle input changes for campaign metrics
   const handleCampaignChange = (e) => {
@@ -99,11 +113,16 @@ const ColdEmailROICalculator = () => {
     });
   };
 
+  // Handle currency change
+  const handleCurrencyChange = (e) => {
+    setSelectedCurrency(e.target.value);
+  };
+
   // Format as currency
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-US', { // Using 'en-US' for base formatting, currency symbol controlled by 'currency'
       style: 'currency',
-      currency: 'USD',
+      currency: currentCurrency.value,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
@@ -114,7 +133,7 @@ const ColdEmailROICalculator = () => {
     return `${value.toFixed(1)}%`;
   };
 
-  // Format as multiplier (e.g., 280% = 2.8x)
+  // Format as multiplier
   const formatMultiplier = (value) => {
     const multiplier = (value / 100) + 1;
     return `${multiplier.toFixed(1)}x`;
@@ -123,6 +142,24 @@ const ColdEmailROICalculator = () => {
   return (
     <div className="flex flex-col p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-lg">
       <h1 className="text-3xl font-bold text-center mb-6">Cold Email ROI Calculator</h1>
+
+      {/* Currency Selector */}
+      <div className="mb-6">
+        <label htmlFor="currencySelector" className="block text-sm font-medium text-gray-700 mb-1">Select Currency</label>
+        <select
+          id="currencySelector"
+          name="currencySelector"
+          value={selectedCurrency}
+          onChange={handleCurrencyChange}
+          className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+        >
+          {currencyOptions.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label} ({option.symbol})
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Input Section */}
@@ -203,7 +240,7 @@ const ColdEmailROICalculator = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Customer LTV ($)</label>
+                <label className="block text-sm font-medium text-gray-700">Customer LTV ({currentCurrency.symbol})</label>
                 <input
                   type="number"
                   name="customerLTV"
@@ -260,7 +297,7 @@ const ColdEmailROICalculator = () => {
             <h2 className="text-xl font-semibold mb-4 text-green-800">Cost Model</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Setup Fee ($)</label>
+                <label className="block text-sm font-medium text-gray-700">Setup Fee ({currentCurrency.symbol})</label>
                 <input
                   type="number"
                   name="setupFee"
@@ -272,7 +309,7 @@ const ColdEmailROICalculator = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Monthly Retainer ($)</label>
+                <label className="block text-sm font-medium text-gray-700">Monthly Retainer ({currentCurrency.symbol})</label>
                 <input
                   type="number"
                   name="retainerCost"
@@ -284,7 +321,7 @@ const ColdEmailROICalculator = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Pay Per Call Fee ($)</label>
+                <label className="block text-sm font-medium text-gray-700">Pay Per Call Fee ({currentCurrency.symbol})</label>
                 <input
                   type="number"
                   name="payPerCallFee"
@@ -303,6 +340,7 @@ const ColdEmailROICalculator = () => {
                   value={costModel.campaignDuration === 0 ? '' : costModel.campaignDuration}
                   onChange={handleCostChange}
                   placeholder="1"
+                  min="1"
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -406,9 +444,9 @@ const ColdEmailROICalculator = () => {
                   <span className="text-red-600">{formatCurrency(calculatedMetrics.revenueShareCost)}</span>
                 </div>
               )}
-              <div className="flex justify-between py-2 border-b border-gray-200">
+              <div className="flex justify-between py-2 border-b border-gray-200 font-semibold">
                 <span className="font-medium">Total Cost:</span>
-                <span className="text-red-600 font-semibold">{formatCurrency(calculatedMetrics.totalCost)}</span>
+                <span className="text-red-600">{formatCurrency(calculatedMetrics.totalCost)}</span>
               </div>
             </div>
           </div>
@@ -434,16 +472,16 @@ const ColdEmailROICalculator = () => {
             </div>
           </div>
 
-          {/* Additional metrics */}
           <div className="bg-indigo-50 p-4 rounded-lg">
             <h2 className="text-xl font-semibold mb-4 text-indigo-800">Additional Metrics</h2>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="bg-white p-3 rounded shadow">
                 <h3 className="text-sm font-medium text-gray-500">Cost Per Lead</h3>
                 <p className="text-lg font-bold">
                   {calculatedMetrics.positiveReplies > 0
                     ? formatCurrency(calculatedMetrics.totalCost / calculatedMetrics.positiveReplies)
-                    : '$0'}
+                    : formatCurrency(0)
+                  }
                 </p>
               </div>
               <div className="bg-white p-3 rounded shadow">
@@ -451,7 +489,8 @@ const ColdEmailROICalculator = () => {
                 <p className="text-lg font-bold">
                   {calculatedMetrics.bookings > 0
                     ? formatCurrency(calculatedMetrics.totalCost / calculatedMetrics.bookings)
-                    : '$0'}
+                    : formatCurrency(0)
+                  }
                 </p>
               </div>
               <div className="bg-white p-3 rounded shadow">
@@ -459,7 +498,8 @@ const ColdEmailROICalculator = () => {
                 <p className="text-lg font-bold">
                   {calculatedMetrics.customers > 0
                     ? formatCurrency(calculatedMetrics.totalCost / calculatedMetrics.customers)
-                    : '$0'}
+                    : formatCurrency(0)
+                  }
                 </p>
               </div>
               <div className="bg-white p-3 rounded shadow">
@@ -467,7 +507,8 @@ const ColdEmailROICalculator = () => {
                 <p className="text-lg font-bold">
                   {calculatedMetrics.effectiveContacts > 0
                     ? formatCurrency(calculatedMetrics.totalRevenue / calculatedMetrics.effectiveContacts)
-                    : '$0'}
+                    : formatCurrency(0)
+                  }
                 </p>
               </div>
             </div>
